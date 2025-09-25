@@ -1,0 +1,10 @@
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# Mojo tracing things
+kgen.*
+
+# Project specifig
+mandelbrot.png
+mandelbrot.pgm
