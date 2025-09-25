@@ -104,7 +104,7 @@ struct Image(Movable, Hashable):
         return self.image[row * self.screen_size.width + col]
 
     def write_pgm(self, filename: String):
-        full_filename = filename + ".pgm"
+        full_filename = "{}.pgm".format(filename)
         print("Writing image to", full_filename)
         with open(full_filename, 'w') as f:
             # First the header

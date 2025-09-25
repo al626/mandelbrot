@@ -206,8 +206,7 @@ struct ImageViewer:
                 var mouse_y = Int(mouse_pos[1])
                 var event_y = Int(event.y)
                 self.logger.debug(
-                    "MOUSEWHEEL at (" + String(mouse_x) + "," + String(mouse_y) + ")" +
-                    ", event.y=" + String(event_y)
+                    "MOUSEWHEEL at ({}, {}), event.y={}".format(mouse_x, mouse_y, event_y)
                 )
 
                 if event_y != 0:
@@ -219,20 +218,18 @@ struct ImageViewer:
 
             elif Int(event.type) == Int(pygame.MOUSEBUTTONDOWN):
                 var event_button = Int(event.button)
-                # self.logger.debug("MOUSEBUTTONDOWN (" + String(event_button) + ")")
                 if event_button == 1:  # Left mouse button
                     self.dragging = True
                     var mouse_pos = pygame.mouse.get_pos()
-                    self.logger.debug("LEFTMOUSEBUTTONDOWN, pos: ", String(mouse_pos))
+                    self.logger.debug("LEFTMOUSEBUTTONDOWN, pos: {}".format(String(mouse_pos)))
                     self.last_mouse_x = Int(mouse_pos[0])
                     self.last_mouse_y = Int(mouse_pos[1])
 
             elif Int(event.type) == Int(pygame.MOUSEBUTTONUP):
                 var event_button = Int(event.button)
-                # self.logger.debug("MOUSEBUTTONUP (" + String(event_button) + ")")
                 if event_button == 1:  # Left mouse button
                     var mouse_pos = pygame.mouse.get_pos()
-                    self.logger.debug("LEFTMOUSEBUTTONUP, pos: ", String(mouse_pos))
+                    self.logger.debug("LEFTMOUSEBUTTONUP, pos: {}".format(String(mouse_pos)))
                     self.dragging = False
                     self.needs_update = True
 
@@ -245,14 +242,14 @@ struct ImageViewer:
                     var dy = (mouse_y - self.last_mouse_y) * self.get_yscale()
 
                     # Pan the view
-                    self.logger.debug("Panning by (" + String(dx) + "," + String(dy) + ")")
+                    self.logger.debug("Panning by ({}, {})".format(dx, dy))
                     self.needs_update = self.set_offset(self.offset_x - dx, self.offset_y - dy)
                     self.last_mouse_x = mouse_x
                     self.last_mouse_y = mouse_y
 
             elif Int(event.type) == Int(pygame.KEYDOWN):
                 event_key = Int(event.key)
-                self.logger.debug("KEYDOWN: " + String(event_key))
+                self.logger.debug("KEYDOWN: {}".format(event_key))
                 if event_key == Int(pygame.K_r):
                     # Reset view
                     self.zoom = 1.0
