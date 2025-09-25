@@ -1,3 +1,4 @@
+from complex import ComplexSIMD
 from gpu import global_idx
 from gpu.host import DeviceContext
 from python import Python
@@ -23,8 +24,10 @@ fn mandelbrot_unsafe(
 ):
     row = global_idx.y
     col = global_idx.x
-    x = xmin + Scalar[ftype](col) * xscale
-    y = ymin + Scalar[ftype](row) * yscale
+    # x = xmin + col * xscale
+    x = xscale.fma(Scalar[ftype](col), xmin)
+    # y = ymin + row * yscale
+    y = yscale.fma(Scalar[ftype](row), ymin)
     if row < height and col < width:
         iters = mandelbrot_core(row, col, x, y)
     else:
@@ -36,26 +39,16 @@ fn mandelbrot_unsafe(
 fn mandelbrot_core(
     row: UInt,
     col: UInt,
-    x: Scalar[ftype],
-    y: Scalar[ftype],
+    cx: Scalar[ftype],
+    cy: Scalar[ftype],
 ) -> Scalar[itype]:
     var iters: Scalar[itype] = 0
-    zx: Scalar[ftype] = 0.0
-    zy: Scalar[ftype] = 0.0
-    zx2: Scalar[ftype] = 0.0
-    zy2: Scalar[ftype] = 0.0
-    # TODO: rewrite this to be both less footgunny and faster
-    #       figure out how to use simd etc
-    z2 = x * x + y * y
-    while iters < MAX_ITERS and z2 < 4.0:
-        # Note zy computation needs to come before zx
-        # because we use zx in zy, but don't use zy in zx
-        zy = 2 * zx * zy + y
-        zx = zx2 - zy2 + x
-        zx2 = zx**2
-        zy2 = zy**2
-        z2 = zx2 + zy2
-        iters += 1
+    var z = ComplexSIMD[ftype, 1](0, 0)
+    var c = ComplexSIMD[ftype, 1](cx, cy)
+    for _ in range(MAX_ITERS):
+        mask_ok = z.squared_norm().le(4)
+        iters = mask_ok.select(iters + 1, iters)
+        z = z.squared_add(c)
     return iters
 
 def generate_image(ctx: DeviceContext, image_coords: ImageCoords, screen_size: ScreenSize) -> Image:
@@ -85,14 +78,8 @@ def main():
         print("Found GPU:", ctx.name())
 
         coords = screen_size.get_default_image_coords()
-
-        blocks_per_grid = screen_size.get_blocks_per_grid(THREADS_PER_BLOCK)
-        print(
-            "Running kernel with grid_dim=(",
-            blocks_per_grid[0], ", ", blocks_per_grid[1], "), "
-            "block_dim=(",
-            THREADS_PER_BLOCK[0], ", ", THREADS_PER_BLOCK[1], ")"
-        )
+        # Example that shows limits of f32 precision
+        # coords = ImageCoords(xmin=-0.71209693, ymin=-0.30181742, w=7.849487e-06, h=5.887115e-06)
 
         image = generate_image(ctx, coords, screen_size)
         print(hash(image))

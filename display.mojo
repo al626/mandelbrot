@@ -9,7 +9,8 @@ from mandelbrot import generate_image
 from mbutils import parse_args, check_gpu, format_sig_fig
 from structures import ScreenSize, ImageCoords, ftype, Image
 
-alias ns = 1000 * 10**3
+alias USE_COLOR = False
+alias USE_EXPONENTIAL_MAP = False
 
 struct ImageViewer:
     var screen_size: ScreenSize
@@ -56,9 +57,9 @@ struct ImageViewer:
         oic = self.orig_image_coords
         return ImageCoords(
             oic.xmin + self.offset_x,
-            oic.xmin + self.offset_x + (oic.xmax - oic.xmin) / self.zoom,
             oic.ymin + self.offset_y,
-            oic.ymin + self.offset_y + (oic.ymax - oic.ymin) / self.zoom,
+            oic.w / self.zoom,
+            oic.h / self.zoom,
         )
 
     def gen_image(self, ctx: DeviceContext) -> Image:
@@ -92,8 +93,8 @@ struct ImageViewer:
         Returns true if updated.
         """
         updated = False
-        w = self.orig_image_coords.xmax - self.orig_image_coords.xmin
-        h = self.orig_image_coords.ymax - self.orig_image_coords.ymin
+        w = self.orig_image_coords.w
+        h = self.orig_image_coords.h
         ox_max = w * (1 - 1 / self.zoom)
         oy_max = h * (1 - 1 / self.zoom)
 
@@ -126,12 +127,8 @@ struct ImageViewer:
         """
 
         # Load up some variables to keep things neat
-        x1 = self.orig_image_coords.xmax
-        x0 = self.orig_image_coords.xmin
-        y1 = self.orig_image_coords.ymax
-        y0 = self.orig_image_coords.ymin
-        w = x1 - x0
-        h = y1 - y0
+        w = self.orig_image_coords.w
+        h = self.orig_image_coords.h
         z0 = self.zoom
         z1 = max(1, min(self.max_zoom, z0 * zoom_factor))
         if z0 == z1:
@@ -160,16 +157,23 @@ struct ImageViewer:
         # Calculate where to draw the image on screen
         for row in range(image.screen_size.height):
             for col in range(image.screen_size.width):
-                color = image.get_value(row, col) * 255 // image.max_value
-                # For actual colors (not grey)
-                base = color * 3
-                color_tuple = pygame.Color(
-                    max(0, min(255, base - 255 * 2)),
-                    max(0, min(255, base - 255)),
-                    max(0, min(255, base)),
-                )
-                # For grey
-                # color_tuple = pygame.Color(color, color, color)
+                @parameter
+                if USE_EXPONENTIAL_MAP:
+                    magic_power = 2
+                    norm = Scalar[ftype](image.get_value(row, col)) / image.max_value
+                    color = Int(((norm ** magic_power * 255) ** 1.5)) % 255
+                else:
+                    color = Int(image.get_value(row, col)) * 255 // image.max_value
+                @parameter
+                if USE_COLOR:
+                    base = color * 3
+                    color_tuple = pygame.Color(
+                        max(0, min(255, base - 255 * 2)),
+                        max(0, min(255, base - 255)),
+                        max(0, min(255, base)),
+                    )
+                else:
+                    color_tuple = pygame.Color(color, color, color)
                 screen.set_at(Python.tuple(col, row), color_tuple)
 
         # Draw info
@@ -299,6 +303,7 @@ struct ImageViewer:
                 clock.tick(60)
 
         pygame.quit()
+
 
 def main():
     screen_size = parse_args()

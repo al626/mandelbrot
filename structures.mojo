@@ -8,25 +8,33 @@ alias utype = DType.uint32
 @fieldwise_init
 struct ImageCoords(Copyable, Movable, ImplicitlyCopyable, Stringable):
     var xmin: Scalar[ftype]
-    var xmax: Scalar[ftype]
     var ymin: Scalar[ftype]
-    var ymax: Scalar[ftype]
+    var w: Scalar[ftype]
+    var h: Scalar[ftype]
 
     fn __str__(self) -> String:
         return (
             "ImageCoords(" +
             "xmin=" + String(self.xmin) + ", " +
-            "xmax=" + String(self.xmax) + ", " +
             "ymin=" + String(self.ymin) + ", " +
-            "ymax=" + String(self.ymax) +
+            "w=" + String(self.w) + ", " +
+            "h=" + String(self.h) +
             ")"
         )
 
+    @staticmethod
+    def from_coords(
+        xmin: Scalar[ftype], xmax: Scalar[ftype], ymin: Scalar[ftype], ymax: Scalar[ftype]
+    ) -> Self:
+        w = xmax - xmin
+        h = ymax - ymin
+        return ImageCoords(xmin, ymin, w, h)
+
     def get_xscale(self, screen_size: ScreenSize) -> Scalar[ftype]:
-        return (self.xmax - self.xmin) / Scalar[ftype](screen_size.width)
+        return self.w / Scalar[ftype](screen_size.width)
 
     def get_yscale(self, screen_size: ScreenSize) -> Scalar[ftype]:
-        return (self.ymax - self.ymin) / Scalar[ftype](screen_size.height)
+        return self.h / Scalar[ftype](screen_size.height)
 
     def get_scale(self, screen_size: ScreenSize) -> (Scalar[ftype], Scalar[ftype]):
         return self.get_xscale(screen_size), self.get_yscale(screen_size)
@@ -70,14 +78,14 @@ struct ScreenSize(Copyable, Movable, ImplicitlyCopyable, Stringable, Hashable):
 
     def get_default_image_coords(self) -> ImageCoords:
         if self.is_4_3():
-            return ImageCoords(-2.5, 1.5, -1.5, 1.5)
+            return ImageCoords.from_coords(-2.5, 1.5, -1.5, 1.5)
         if self.is_16_9():
-            return ImageCoords(-2.5, 1.5, -1.125, 1.125)
+            return ImageCoords.from_coords(-2.5, 1.5, -1.125, 1.125)
         resolution = self.get_resolution()
         if resolution > Scalar[ftype](16.0 / 9.0):
-            return ImageCoords(-2.5 * resolution, 1.5 * resolution, -1.125, 1.125)
+            return ImageCoords.from_coords(-2.5 * resolution, 1.5 * resolution, -1.125, 1.125)
         else:
-            return ImageCoords(-2.5, 1.5, -2 / resolution, 2 / resolution)
+            return ImageCoords.from_coords(-2.5, 1.5, -2 / resolution, 2 / resolution)
 
 
 @fieldwise_init
